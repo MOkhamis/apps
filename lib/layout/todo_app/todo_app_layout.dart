@@ -1,0 +1,400 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, avoid_print, prefer_typing_uninitialized_variables, avoid_unnecessary_containers, prefer_is_empty, unused_import, unnecessary_import, must_be_immutable, unused_local_variable
+
+import 'dart:async';
+
+import 'package:app/shared/components/components.dart';
+import 'package:app/shared/cubit/cubit.dart';
+import 'package:app/shared/cubit/states.dart';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:sqflite/sqlite_api.dart';
+
+class ToDoHomeLayout extends StatelessWidget {
+  ToDoHomeLayout({super.key});
+
+  var scaffoldKey = GlobalKey<ScaffoldState>();
+  var formKey = GlobalKey<FormState>();
+
+  //to can read it in all methods of database
+  static late Database database;
+
+  bool isBottomSheetShown = false;
+  IconData fabIcon = Icons.edit;
+  var titleCon = TextEditingController();
+  var timeCon = TextEditingController();
+  var dateCon = TextEditingController();
+  List<Map> tasks = [];
+
+  // @override
+  // void initState() {
+  //   super.initState();
+
+  //   //inside create will call the list(getDataFromDatabase)
+  //   createDatabase();
+  // }
+
+  @override
+  Widget build(BuildContext context) {
+    //blocProvider call it once time in app
+    return BlocProvider(
+      create: (context) => AppCubit(),
+      child: BlocConsumer<AppCubit, AppStates>(
+        listener: (context, state) {},
+        builder: (context, state) {
+          AppCubit cubit = AppCubit.get(context);
+          return Scaffold(
+              key: scaffoldKey,
+              appBar: AppBar(
+                backgroundColor: Colors.teal,
+                title: Text(
+                  cubit.titles[cubit.currentIndex],
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 25,
+                      fontWeight: FontWeight.bold),
+                ),
+              ),
+              //tasks.length == 1? Center(child: CircularProgressIndicator()):
+              body: cubit.screens[cubit.currentIndex],
+              floatingActionButton: FloatingActionButton(
+                child: Icon(fabIcon),
+                onPressed: () {
+                  if (isBottomSheetShown) {
+                    if (formKey.currentState!.validate()) {
+                      insertToDataBase(
+                        title: titleCon.text,
+                        time: timeCon.text,
+                        date: dateCon.text,
+                      ).then((value) {
+                        getDataFromDatabase(database).then((value) {
+                          Navigator.pop(context);
+                          // setState(() {
+                          //   isBottomSheetShown = false;
+                          //   fabIcon = Icons.edit;
+
+                          //   //when showshown show this icon
+                          //   tasks = value;
+                          //   print(tasks);
+                          // });
+                        });
+                      });
+                    }
+                  } else {
+                    scaffoldKey.currentState!
+                        .showBottomSheet(
+                          elevation: 20,
+                          (context) => Container(
+                            padding: EdgeInsets.all(20),
+                            color: Colors.white,
+                            child: Form(
+                              key: formKey,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  defaultTextFormField(
+                                    controller: titleCon,
+                                    type: TextInputType.text,
+                                    label: 'Add Task Title',
+                                    isPrefix: true,
+                                    prefix: Icons.title,
+                                    validate: (dynamic value) {
+                                      if (value == '') {
+                                        return '*required';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  SizedBox(
+                                    height: 15,
+                                  ),
+                                  defaultTextFormField(
+                                    controller: timeCon,
+                                    type: TextInputType.datetime,
+                                    label: 'Task Time',
+                                    isPrefix: true,
+                                    prefix: Icons.watch_later_outlined,
+                                    validate: (value) {
+                                      if (value == '') {
+                                        return 'time field is required';
+                                      }
+                                      return null;
+                                    },
+                                    //to showTimePicker onTap
+                                    onTap: () {
+                                      showTimePicker(
+                                              context: context,
+                                              initialTime: TimeOfDay.now())
+                                          .then(
+                                        (value) {
+                                          timeCon.text =
+                                              value!.format(context).toString();
+                                          return null;
+                                        },
+                                      );
+                                    },
+                                  ),
+                                  SizedBox(
+                                    height: 15,
+                                  ),
+                                  defaultTextFormField(
+                                    controller: dateCon,
+                                    type: TextInputType.text,
+                                    label: 'Date Time',
+                                    isPrefix: true,
+                                    prefix: Icons.calendar_month,
+                                    validate: (value) {
+                                      if (value == '') {
+                                        return 'Date field is required';
+                                      }
+                                      return null;
+                                    },
+                                    //to showTimePicker onTap
+                                    onTap: () {
+                                      showDatePicker(
+                                        context: context,
+                                        firstDate: DateTime.now(),
+                                        initialDate: DateTime.now(),
+                                        lastDate: DateTime.parse('2025-3-4'),
+                                      ).then(
+                                        (value) {
+                                          //package intl
+                                          dateCon.text =
+                                              DateFormat.yMMMd().format(value!);
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
+                        .closed
+                        .then((value) {
+                      isBottomSheetShown = false;
+
+                      // setState(() {
+                      //   fabIcon = Icons.edit;
+                      // });
+                      //when showshown show this icon
+                    });
+                    isBottomSheetShown = true;
+                    //to enter if loop more
+
+                    // setState(() {
+                    //   fabIcon = Icons.add;
+                    // });
+                  }
+                },
+              ),
+              bottomNavigationBar: BottomNavigationBar(
+                type: BottomNavigationBarType.fixed,
+                currentIndex: cubit.currentIndex,
+                onTap: (index) {
+                  cubit.changeIndex(index);
+                  //call the method that change pages
+                },
+                items: [
+                  BottomNavigationBarItem(
+                      icon: Icon(Icons.menu), label: 'Tasks'),
+                  BottomNavigationBarItem(
+                      icon: Icon(Icons.done), label: 'Done'),
+                  BottomNavigationBarItem(
+                      icon: Icon(Icons.archive), label: 'Archived'),
+                ],
+              ));
+        },
+      ),
+    );
+  }
+
+  void createDatabase() async {
+    database = await openDatabase(
+      'todo.db',
+      version: 1,
+      //create database
+      onCreate: (database, version) {
+        print('dataBase Created');
+
+        //create the table in oncreate once time
+        database
+            .execute(
+                'CREATE TABLE tasks(id INTEGER PRINMARY KEY, title TEXT ,date TEXT,time TEXT ,status TEXT)')
+            .then(
+          (value) {
+            print('Table Created');
+          },
+        ).catchError(
+          (error) {
+            print('error when create table ${error.toString()}');
+          },
+        );
+      },
+      onOpen: (database) {
+        getDataFromDatabase(database).then((value) {
+          // setState(() {
+          //   tasks = value;
+          //   print(tasks);
+          // });
+        });
+        print('dataBase Opened');
+      },
+    );
+  }
+
+  Future insertToDataBase({
+    required dynamic title,
+    required dynamic time,
+    required dynamic date,
+  }) async {
+    //way 1
+    // database.rawInsert('sql').then((value) => null).catchError((error) {});
+    //way 2
+    await database.transaction((txn) {
+      return txn
+          .rawInsert(
+              'INSERT INTO tasks(title ,date ,time  ,status ) VALUES("$title","$date","$time","Active")')
+          .then(
+        (value) {
+          print('$value the task 1 inserted  into table');
+        },
+      ).catchError((error) {
+        print('the error when you insert the task to table');
+      });
+    });
+  }
+
+  Future<List<Map>> getDataFromDatabase(database) async {
+    // Get the records  // and call it in onOpen in Creation
+    return await database.rawQuery('SELECT * FROM tasks');
+  }
+}
+
+//  FloatingActionButton(
+//         onPressed: () {
+//           //هو دلوقتي معروض قبل ما يعمل بوب ويروح لازم تعمله ال validate
+//           if (isBottomSheetShown) {
+//             if (formKey.currentState!.validate()) {
+//               insertToDataBase(
+//                 time: timeCon.text,
+//                 title: titleCon.text,
+//                 date: dateCon.text,
+//               ).then(
+//                 (value) {
+//                   Navigator.pop(context);
+//                   isBottomSheetShown = false;
+//                   setState(() {
+//                     fabIcon = Icons.edit;
+//                   });
+//                 },
+//               );
+//             }
+//             // //.then --> to ensure that the data insetred then complete the code
+//           } else {
+//             scaffoldKey.currentState!
+//                 .showBottomSheet(
+//                   (context) => Container(
+//                     padding: const EdgeInsets.all(20),
+//                     color: Colors.grey[100],
+//                     child: Form(
+//                       key: formKey,
+//                       child: Column(
+//                         mainAxisSize: MainAxisSize.min,
+//                         children: [
+//                           defaultTextFormField(
+//                             controller: titleCon,
+//                             type: TextInputType.name,
+//                             label: 'add task',
+//                             isPrefix: true,
+//                             prefix: Icons.title,
+//                             validate: (dynamic value) {
+//                               if (value.isEmpty) {
+//                                 return '*required';
+//                               }
+//                               return null;
+//                             },
+//                           ),
+//                           SizedBox(
+//                             height: 15,
+//                           ),
+//                           defaultTextFormField(
+//                             controller: timeCon,
+//                             type: TextInputType.datetime,
+//                             label: 'Task Time',
+//                             isPrefix: true,
+//                             prefix: Icons.watch_later_outlined,
+//                             validate: (dynamic value) {
+//                               if (value.isEmpty) {
+//                                 return 'time field is required';
+//                               }
+//                               return null;
+//                             },
+//                             //to showTimePicker onTap
+//                             onTap: () {
+//                               showTimePicker(
+//                                       context: context,
+//                                       initialTime: TimeOfDay.now())
+//                                   .then(
+//                                 (value) {
+//                                   timeCon.text = value.toString();
+//                                   return null;
+//                                 },
+//                               );
+//                             },
+//                           ),
+//                           SizedBox(
+//                             height: 15,
+//                           ),
+//                           defaultTextFormField(
+//                             controller: dateCon,
+//                             type: TextInputType.datetime,
+//                             label: 'Date Time',
+//                             isPrefix: true,
+//                             prefix: Icons.calendar_view_day_outlined,
+//                             validate: (value) {
+//                               if (value.isEmpty) {
+//                                 return 'Date field is required';
+//                               }
+//                               return null;
+//                             },
+//                             //to showTimePicker onTap
+//                             onTap: () {
+//                               showDatePicker(
+//                                 context: context,
+//                                 firstDate: DateTime.now(),
+//                                 initialDate: DateTime.now(),
+//                                 lastDate: DateTime.parse('2024-3-4'),
+//                               ).then(
+//                                 (value) {
+//                                   //package intl
+//                                   dateCon.text =
+//                                       DateFormat.yMMMd().format(value!);
+
+//                                   return null;
+//                                 },
+//                               );
+//                             },
+//                           ),
+//                         ],
+//                       ),
+//                     ),
+//                   ),
+//                 )
+//                 .closed
+//                 .then((value) {
+//               isBottomSheetShown = false;
+//               setState(() {
+//                 fabIcon = Icons.edit;
+//               });
+//             });
+//             isBottomSheetShown = true;
+//             setState(() {
+//               fabIcon = Icons.add;
+//             });
+//           }
+//         },
+//         child: Icon(fabIcon),
+//       ),
