@@ -1,4 +1,4 @@
-// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, avoid_print, prefer_typing_uninitialized_variables, avoid_unnecessary_containers, prefer_is_empty
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, avoid_print, prefer_typing_uninitialized_variables, avoid_unnecessary_containers, prefer_is_empty, unused_import, unnecessary_import
 
 import 'dart:async';
 
@@ -154,7 +154,7 @@ class _HomeLayoutState extends State<HomeLayout> {
                           ),
                           defaultTextFormField(
                             controller: dateCon,
-                            type: TextInputType.datetime,
+                            type: TextInputType.text,
                             label: 'Date Time',
                             isPrefix: true,
                             prefix: Icons.calendar_month,
@@ -265,7 +265,7 @@ class _HomeLayoutState extends State<HomeLayout> {
     await database.transaction((txn) {
       return txn
           .rawInsert(
-              'INSERT INTO tasks(title ,date ,time  ,status ) VALUES("$title","$date","$time","Tired")')
+              'INSERT INTO tasks(title ,date ,time  ,status ) VALUES("$title","$date","$time","Active")')
           .then(
         (value) {
           print('$value the task 1 inserted  into table');

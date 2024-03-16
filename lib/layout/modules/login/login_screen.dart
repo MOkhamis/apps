@@ -1,4 +1,4 @@
-// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, curly_braces_in_flow_control_structures, prefer_const_constructors_in_immutables, avoid_print, unnecessary_import
 
 import 'package:app/layout/shared/components/components.dart';
 import 'package:flutter/cupertino.dart';

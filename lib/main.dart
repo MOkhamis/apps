@@ -1,4 +1,4 @@
-// ignore_for_file: prefer_const_constructors
+// ignore_for_file: prefer_const_constructors, unused_import
 
 import 'package:app/layout/home_layout.dart';
 import 'package:app/layout/modules/bmi_screen/bmi_csreen.dart';
@@ -14,7 +14,7 @@ void main() {
   runApp(
     MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: HomeLayout(),
+      home: Counter(),
     ),
   );
 }
